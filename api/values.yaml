@@ -1,0 +1,79 @@
+# Default values for the api chart.
+
+replicaCount: 2
+
+image:
+  repository: api
+  tag: ""                 # empty -> use .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3000"
+  prometheus.io/path: "/metrics"
+
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  host: api.local
+  tls: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector:
+  pool: apps
+
+tolerations: []
+
+affinity: {}
+
+persistence:
+  enabled: true           # hostPath volume -> survives pod restarts on the node
+  mountPath: /usr/src/app/data
+  hostPath: /var/local-files/api-data
+
+env:                      # extra env vars, e.g. LOG_LEVEL / FAIL_AFTER
+  LOG_LEVEL: info
+
+probes:
+  readiness:
+    path: /readyz
+    initialDelaySeconds: 2
+    periodSeconds: 5
+  liveness:
+    path: /healthz
+    initialDelaySeconds: 5
+    periodSeconds: 10

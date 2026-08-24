@@ -1,0 +1,24 @@
+1. Get the application URL:
+
+{{- if .Values.ingress.enabled }}
+  Add to /etc/hosts (if not present):
+    echo "127.0.0.1 {{ .Values.ingress.host }}" | sudo tee -a /etc/hosts
+
+  Then open:  http://{{ .Values.ingress.host }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "api.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "ClusterIP" .Values.service.type }}
+  kubectl run tmp --rm -it --image=curlimages/curl --restart=Never \
+    -- curl -s http://{{ include "api.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+{{- end }}
+
+2. Metrics (Prometheus format):
+  kubectl run tmp --rm -it --image=curlimages/curl --restart=Never \
+    -- curl -s http://{{ include "api.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local/metrics
+
+3. Chaos testing:
+  kubectl run tmp --rm -it --image=curlimages/curl --restart=Never -- \
+    curl -s -X POST http://{{ include "api.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local/__admin/chaos \
+    -d '{"enabled":true,"errorRate":0.5}'
